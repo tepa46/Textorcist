@@ -49,6 +49,7 @@ class Board:
                 pygame.draw.rect(screen, pygame.Color('WHITE'), (
                     j * self.cell_size + self.left, i * self.cell_size + self.top, self.cell_size, self.cell_size),
                                  width=1)
+
         all_sprites.draw(screen)
 
 
