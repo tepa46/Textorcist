@@ -1,7 +1,4 @@
-import json
-
-
-# пока что это босеполезный файл, но потом он станет очень нужным.(Когда буду переносить функции получения информации об игре из основных файлов игры).
+import UserDataManager
 
 
 def clear_file(name):
@@ -11,80 +8,24 @@ def clear_file(name):
 
 class GameInfo:
     def __init__(self):
+        self.player_name = ''
         self.level = ''
-        self.file = ''
-        self.inventory = ''
-        self.answer = ''
-        self.challenge = ''
-        self.completed_tasks = ''
-        self.sequence_text = ''
-        self.unlock_levels = list()
+        self.player_koor = []
+        self.inventory = []
 
     def init_all_info(self):
+        self.player_name = self.get_player_name()
         self.level = self.get_level()
-        self.file = self.get_file()
+        self.player_koor = self.get_player_koor()
         self.inventory = self.get_inventory()
-        self.answer = self.get_answer()
-        self.challenge = self.get_challenge()
-        self.completed_tasks = self.get_completed_tasks()
-        self.sequence_text = self.get_sequence_text()
-        self.get_unlock_levels()
 
-    def get_unlock_levels(self):
-        with open('unlock_levels.txt', 'r', encoding='utf8') as input_file:
-            self.unlock_levels = input_file.read().split('\n')
+    def get_player_name(self):
+        with open('player_name.txt', 'r', encoding='utf8') as input_file:
+            return input_file.read()
 
     def get_level(self):
         with open('level_num.txt', 'r') as input_file:
             return input_file.readline()
-
-    def get_file(self):
-        with open(f'{self.level}/file.txt', 'r') as input_file:
-            return input_file.readline()
-
-    def get_inventory(self):
-        with open(f'{self.level}/inventory.txt', 'r') as input_file:
-            return input_file.read().split('\n')
-
-    def get_answer(self):
-        with open(f'{self.level}/answer.txt', 'r', encoding='utf8') as input_file:
-            return input_file.readline()
-
-    def get_challenge(self):
-        with open(f'{self.level}/challenge.txt', 'r', encoding='utf8') as input_file:
-            return input_file.read().split('\n')
-
-    def get_completed_tasks(self):
-        with open(f'{self.level}/completed_tasks.txt', 'r') as input_file:
-            return input_file.read().split()
-
-    def get_sequence_text(self):
-        with open(f'{self.level}/sequence_text.txt', 'r', encoding='utf8') as input_file:
-            return input_file.read()
-
-    def get_button_info(self, button_name):
-        with open(f'{self.level}/{self.file}/{button_name}', 'r', encoding='utf8') as input_file:
-            text = input_file.read()
-            command = text.split('\n')[2]
-            new_file = text.split('\n')[3]
-            return text, command, new_file
-
-    def get_button_file(self, button_name):
-        with open(f'{self.level}/{self.file}/{button_name}', 'r', encoding='utf8') as input_file:
-            return input_file.read().split('\n')
-
-    def get_history(self):
-        self.put_used_history()
-        with open(f'{self.level}/{self.file}/room_history.txt', 'r', encoding='utf8') as input_file:
-            history = input_file.read()
-        return history
-
-    def get_used_history(self):
-        with open(f'{self.level}/rooms_history_used.txt', 'r', encoding='utf8') as input_file:
-            used_his = input_file.read().split('\n')
-        if self.file in used_his:
-            return True
-        return False
 
     def put_level(self, level):
         clear_file('level_num.txt')
@@ -92,52 +33,53 @@ class GameInfo:
             output_file.write(level)
         self.level = self.get_level()
 
-    def put_file(self, file):
-        clear_file(f'{self.level}/file.txt')
-        with open(f'{self.level}/file.txt', 'a') as output_file:
-            output_file.write(file)
-        self.file = self.get_file()
+    def put_new_level(self):
+        levels = UserDataManager.get_user_levels()
 
-    def put_completed_tasks(self, text):
-        with open(f'{self.get_level()}/completed_tasks.txt', 'a') as output_file:
-            output_file.write(text[4] + '\n')
-        self.completed_tasks = self.get_completed_tasks()
-
-    def put_inventory(self, text):
-        with open(f'{self.get_level()}/inventory.txt', 'a') as output_file:
-            output_file.write(self.get_challenge()[int(text[4]) - 1] + '\n')
-        self.inventory = self.get_inventory()
-
-    def put_sequence_new(self, text):
-        with open(f'{self.get_level()}/sequence_text.txt', 'w', encoding='utf8') as output_file:
-            clear_file(f'{self.get_level()}/sequence_text.txt')
-            if self.get_challenge()[int(text[4]) - 1] != '':
-                output_file.write(self.get_challenge()[int(text[4]) - 1])
-            else:
-                output_file.write('Здесь ничего нет')
-        self.sequence_text = self.get_sequence_text()
-
-    def put_sequence_old(self):
-        with open(f'{self.level}/sequence_text.txt', 'w', encoding='utf8') as output_file:
-            clear_file(f'{self.get_level()}/sequence_text.txt')
-            output_file.write('Вы уже тут все посмотрели')
-        self.sequence_text = self.get_sequence_text()
-
-    def put_used_history(self):
-        with open(f'{self.level}/rooms_history_used.txt', 'a') as output_file:
-            output_file.write(f'{self.file}' + '\n')
-
-    def put_new_level(self, level_name):
-        if level_name not in self.unlock_levels:
-            with open('unlock_levels.txt', 'a') as output_file:
-                output_file.write('\n' + level_name)
+        if int(self.level.split("_")[1]) + 1 <= 2 and f'level_{int(self.level.split("_")[1]) + 1}' not in \
+                levels[self.player_name]:
+            levels[self.player_name].append(f"level_{int(self.level.split('_')[1]) + 1}")
+            UserDataManager.put_user_levels(levels)
 
     def clear_files(self):
-        clear_file(f'{self.get_level()}/inventory.txt')
-        clear_file(f'{self.get_level()}/completed_tasks.txt')
-        clear_file(f'{self.get_level()}/rooms_history_used.txt')
+        clear_file('inventory.txt')
 
+    def read_map(self, view):
+        with open(f'data/levels/{self.level}/maps/{view}_map.txt', 'r', encoding='utf8') as f:
+            map_file = f.read().split('\n')
+            for i in range(len(map_file)):
+                while len(map_file[i].replace('  ', ' ')) != len(map_file[i]):
+                    map_file[i] = map_file[i].replace('  ', ' ')
+            return [mini_pic for mini_pic in [pic.split(' ') for pic in map_file]]
 
+    def get_player_koor(self):
+        with open(f'data/levels/{self.level}/player_koor.txt', 'r', encoding='utf8') as f:
+            koor_file = f.read().split(' ')
+            return [int(pic) for pic in koor_file]
+
+    def update_inventory(self, text):
+        with open('inventory.txt', 'a', encoding='utf8') as output_file:
+            output_file.write(text + '\n')
+        self.inventory = self.get_inventory()
+
+    def get_inventory(self):
+        with open(f'inventory.txt', 'r', encoding='utf8') as input_file:
+            inventory = input_file.read().split('\n')
+        if inventory[-1] == '':
+            inventory = inventory[:-1]
+        return inventory
+
+    def get_chest_numbers(self):
+        with open(f'data/levels/{self.level}/chest_number.txt', 'r', encoding='utf8') as input_file:
+            all_numbers = input_file.read().split('\n')
+        if all_numbers[-1] == '':
+            all_numbers = all_numbers[:-1]
+        return all_numbers
+
+    def get_chest_num(self, chest_num):
+        with open(f'data/levels/{self.level}/chest_number.txt', 'r', encoding='utf8') as input_file:
+            numbers = input_file.read().split('\n')
+        return numbers[int(chest_num)]
 
 
 info = GameInfo()
