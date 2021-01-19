@@ -8,6 +8,34 @@ import main_menu
 SCREEN_SIZE = [660, 660]
 
 
+def get_user_data():
+    try:
+        open('data/users.json', 'r', encoding='utf8')
+    except FileNotFoundError:
+        with open('data/users.json', 'w', encoding='utf8') as f:
+            print('{}', file=f)
+
+    with open('data/users.json', 'r', encoding='utf8') as input_file:
+        d = json.load(input_file)
+    return d
+
+
+def get_user_levels():
+    with open('data/unlock_levels.json', 'r', encoding='utf8') as input_file:
+        d = json.load(input_file)
+    return d
+
+
+def put_user_data(users_list):
+    with open('data/users.json', 'w', encoding='utf8') as output_file:
+        json.dump(users_list, output_file)
+
+
+def put_user_levels(users_levels):
+    with open('data/unlock_levels.json', 'w', encoding='utf8') as output_file:
+        json.dump(users_levels, output_file)
+
+
 class UserDataManager(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -161,40 +189,6 @@ class Register(QWidget):
         self.close()
         self.ex = UserDataManager()
         self.ex.show()
-
-
-def get_user_data():
-    try:
-        open('data/users.json', 'r', encoding='utf8')
-    except FileNotFoundError:
-        with open('data/users.json', 'w', encoding='utf8') as f:
-            print('{}', file=f)
-
-    with open('data/users.json', 'r', encoding='utf8') as input_file:
-        d = json.load(input_file)
-    return d
-
-
-def get_user_levels():
-    try:
-        open('data/unlock_levels.json', 'r', encoding='utf8')
-    except FileNotFoundError:
-        with open('data/unlock_levels.json', 'w', encoding='utf8') as f:
-            print('{}', file=f)
-
-    with open('data/unlock_levels.json', 'r', encoding='utf8') as input_file:
-        d = json.load(input_file)
-    return d
-
-
-def put_user_data(users_list):
-    with open('data/users.json', 'w', encoding='utf8') as output_file:
-        json.dump(users_list, output_file)
-
-
-def put_user_levels(users_levels):
-    with open('data/unlock_levels.json', 'w', encoding='utf8') as output_file:
-        json.dump(users_levels, output_file)
 
 
 if __name__ == '__main__':
