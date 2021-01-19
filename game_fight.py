@@ -7,7 +7,6 @@ import time
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', f'{name}.png')
     if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
         sys.exit()
     image = pygame.image.load(fullname)
     if colorkey is not None:
@@ -47,9 +46,7 @@ class Fight:
         self.running = True
         self.result = ''
 
-    def render(self):
-        all_sprites = pygame.sprite.Group()
-
+    def load_all_sprites(self, all_sprites):
         load_sprite(all_sprites, 'fight/background', 0, 0, (660, 660))
         load_sprite(all_sprites, f'fight/{self.hero.name}', 100, 350, (200, 200))
         load_sprite(all_sprites, f'fight/{self.bad.name}', 400, 350, (200, 200), -1)
@@ -57,12 +54,21 @@ class Fight:
         load_sprite(all_sprites, f'fight/right_hp_{self.bad.hp}', 410, 0, (250, 40))
         load_sprite(all_sprites, 'fight/right_button_0', 150, 560, (60, 60), -1)
 
+    def hero_damage(self, all_sprites):
         if time.time() - self.hero.past_time < 0.7:
             load_sprite(all_sprites, 'fight/right_button_1', 150, 560, (60, 60), -1)
             load_sprite(all_sprites, 'fight/boom', 450, 350, (100, 100))
 
+    def bad_damdage(self, all_sprites):
         if time.time() - self.bad.past_time < 0.7:
             load_sprite(all_sprites, 'fight/boom', 170, 350, (100, 100))
+
+    def render(self):
+        all_sprites = pygame.sprite.Group()
+
+        self.load_all_sprites(all_sprites)
+        self.hero_damage(all_sprites)
+        self.bad_damdage(all_sprites)
 
         all_sprites.draw(self.screen)
 
@@ -100,12 +106,15 @@ class Fight:
     def game_end(self, result):
         self.result = result
         self.running = False
+        self.screen.fill((0, 0, 0))
+        self.render()
+        pygame.display.flip()
 
         all_sprites = pygame.sprite.Group()
         if result == 'hero':
-            load_sprite(all_sprites, 'fight/win', 0, 0, (660, 660))
+            load_sprite(all_sprites, 'fight/win', 0, 0, (660, 660), -1)
         else:
-            load_sprite(all_sprites, 'fight/lost', 0, 0, (660, 660))
+            load_sprite(all_sprites, 'fight/lost', 0, 0, (660, 660), -1)
 
         all_sprites.draw(self.screen)
         pygame.display.flip()
