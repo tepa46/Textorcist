@@ -1,17 +1,12 @@
 import sys
-import os
 from PyQt5.QtWidgets import QInputDialog, QPushButton, QApplication, QWidget
 from PyQt5.QtGui import QImage, QPalette, QBrush
 from PyQt5.QtCore import QSize
 import game_file
 import UserDataManager
+import game_info
 
 SCREEN_SIZE = [660, 660]
-
-
-def clear_file(name):
-    with open(name, 'w') as input_file:
-        input_file.truncate()
 
 
 class MainMenu(QWidget):
@@ -42,16 +37,18 @@ class MainMenu(QWidget):
         self.show()
 
     def play(self):
-        with open('player_name.txt', 'r', encoding='utf8') as input_file:
-            player_name = input_file.read()
+        open('game_info.py')
+        player_name = game_info.info.player_name
         levels = UserDataManager.get_user_levels()
         level, ok_pressed = QInputDialog.getItem(
             self, "Выбор уровня", "Выберите уровень или напишите его название",
             levels[player_name], 0, False)
         if ok_pressed:
-            clear_file('inventory.txt')
+            game_info.info.clear_files()
+            game_info.info.put_level(level)
+            game_info.info.init_all_info()
             self.setFixedSize(0, 0)
-            game_file.main(level)
+            game_file.Textorcist()
             self.setFixedSize(*SCREEN_SIZE)
 
     def back(self):
