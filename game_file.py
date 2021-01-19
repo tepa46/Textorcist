@@ -1,29 +1,20 @@
 import pygame
-import sys
 import os
 import time
 
 import game_fight
-import challenge_window
+import PopUpWindow
+import game_info
 
 SIZE = [660, 660]
 MAP_SIZE = [11, 11]
 
 
-def read_map(level, view):
-    with open(f'data/levels/{level}/maps/{view}_map.txt', 'r', encoding='utf8') as f:
-        map_file = f.read().split('\n')
-        for i in range(len(map_file)):
-            while len(map_file[i].replace('  ', ' ')) != len(map_file[i]):
-                map_file[i] = map_file[i].replace('  ', ' ')
-        return [mini_pic for mini_pic in [pic.split(' ') for pic in map_file]]
-
-
-def load_image(name, colorkey=None):
-    fullname = os.path.join('data', f'{name}.png')
+def load_image(dir, name, colorkey=None):
+    fullname = os.path.join('data', f'{dir}/{name}.png')
     if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
+        name = 'empty'
+        fullname = os.path.join('data', f'{dir}/{name}.png')
     image = pygame.image.load(fullname)
     if colorkey is not None:
         image = image.convert()
@@ -35,27 +26,23 @@ def load_image(name, colorkey=None):
     return image
 
 
+def load_sprite(all_sprites, dir, name, x, y, SIZE, colorkey=None):
+    sprite = pygame.sprite.Sprite(all_sprites)
+    sprite.image = pygame.transform.scale(load_image(dir, name, colorkey), SIZE)
+    sprite.rect = sprite.image.get_rect()
+    sprite.rect.x = x
+    sprite.rect.y = y
+
+
 def load_sprites(group, map, koor, dir, cell_size, colorkey=None):
     for i in range(-5, 6, 1):
         for j in range(-5, 6, 1):
             sprite = pygame.sprite.Sprite(group)
             sprite.image = pygame.transform.scale(
-                load_image(f'{dir}/{map[koor[0] + i][koor[1] + j]}', colorkey), (60, 60))
+                load_image(dir, map[koor[0] + i][koor[1] + j], colorkey), (60, 60))
             sprite.rect = sprite.image.get_rect()
             sprite.rect.x = (j + 5) * cell_size
             sprite.rect.y = (i + 5) * cell_size
-
-
-def get_player_koor(level):
-    with open(f'data/levels/{level}/player_koor.txt', 'r', encoding='utf8') as f:
-        koor_file = f.read().split(' ')
-        return [int(pic) for pic in koor_file]
-
-
-def get_chest_num(level, chest_num):
-    with open(f'data/levels/{level}/chest_number.txt', 'r', encoding='utf8') as input_file:
-        numbers = input_file.read().split('\n')
-    return numbers[int(chest_num)]
 
 
 def is_possible_to_move(material):
@@ -65,34 +52,45 @@ def is_possible_to_move(material):
 
 
 class Board:
-    def __init__(self, width, height, level, materials_map, heroes_map, chest_map):
-        self.width = width
-        self.height = height
+    def __init__(self, screen):
+        self.width = MAP_SIZE[0]
+        self.height = MAP_SIZE[1]
         self.cell_size = 60
-        self.materials_map = materials_map
-        self.heroes_map = heroes_map
-        self.chest_map = chest_map
-        self.level = level
+        self.materials_map = game_info.info.read_map('materials')
+        self.heroes_map = game_info.info.read_map('heroes')
+        self.chest_map = game_info.info.read_map('chest')
+        self.screen = screen
 
-    def render(self, screen, koor):
+    def draw_win_window(self):
         all_sprites = pygame.sprite.Group()
+        load_sprite(all_sprites, 'fight', 'win', 0, 0, (660, 660), -1)
+        all_sprites.draw(self.screen)
+        pygame.display.flip()
+        time.sleep(3)
+
+    def draw_map(self, all_sprites, koor):
         load_sprites(all_sprites, self.materials_map, koor, 'materials', self.cell_size)
         load_sprites(all_sprites, self.heroes_map, koor, 'heroes', self.cell_size, -1)
 
+    def draw_hero(self, all_sprites):
         sprite = pygame.sprite.Sprite(all_sprites)
-        sprite.image = pygame.transform.scale(load_image('heroes/hero'), (60, 60))
+        sprite.image = pygame.transform.scale(load_image('heroes', 'hero'), (60, 60))
         sprite.rect = sprite.image.get_rect()
         sprite.rect.x = 5 * self.cell_size
         sprite.rect.y = 5 * self.cell_size
+
+    def render(self, screen, koor):
+        all_sprites = pygame.sprite.Group()
+        self.draw_map(all_sprites, koor)
+        self.draw_hero(all_sprites)
         all_sprites.draw(screen)
 
 
 class Player(Board):
-    def __init__(self, screen, width, height, level, materials_map, heroes_map, chest_map, player_koor):
-        super().__init__(width, height, level, materials_map, heroes_map, chest_map)
-        self.screen = screen
-        self.player_koor = player_koor
-        self.past_player_koor = player_koor
+    def __init__(self, screen):
+        super().__init__(screen)
+        self.player_koor = game_info.info.player_koor
+        self.past_player_koor = game_info.info.player_koor
 
     def new_koor(self, command):
         if command == pygame.K_UP:
@@ -112,7 +110,7 @@ class Player(Board):
                 self.past_player_koor = self.player_koor.copy()
                 self.player_koor[1] += 1
 
-    def heroes_processing(self):
+    def check_fight_event(self):
         if self.heroes_map[self.player_koor[0]][self.player_koor[1]].split('_')[0] == 'bad':
             fight = game_fight.Fight(self.screen, 'hero', self.heroes_map[self.player_koor[0]][self.player_koor[1]])
             result = fight.run()
@@ -120,21 +118,37 @@ class Player(Board):
                 self.heroes_map[self.player_koor[0]][self.player_koor[1]] = 'empty'
             else:
                 self.player_koor = self.past_player_koor
-        elif self.heroes_map[self.player_koor[0]][self.player_koor[1]] == 'chest':
-            if self.chest_map[self.player_koor[0]][self.player_koor[1]] != 'empty':
-                text = get_chest_num(self.level, self.chest_map[self.player_koor[0]][self.player_koor[1]])
-                self.chest_map[self.player_koor[0]][self.player_koor[1]] = 'empty'
-                self.ex = challenge_window.ChallengeWindow(text)
-                self.ex.show()
+
+    def check_chest_event(self):
+        if self.heroes_map[self.player_koor[0]][self.player_koor[1]] == 'chest' and \
+                self.chest_map[self.player_koor[0]][self.player_koor[1]] != 'empty':
+            text = game_info.info.get_chest_num(self.chest_map[self.player_koor[0]][self.player_koor[1]])
+            self.chest_map[self.player_koor[0]][self.player_koor[1]] = 'empty'
+            PopUpWindow.PopUpWindow(self.screen, 'Вы нашли новую часть числа: ' + '\n' + text)
+            game_info.info.update_inventory(text)
+
+    def check_password_event(self):
+        if self.heroes_map[self.player_koor[0]][self.player_koor[1]] == 'pass':
+            inventory = game_info.info.inventory
+            all_numbers = game_info.info.get_chest_numbers()
+
+            if len(inventory) == len(all_numbers):
+                game_info.info.put_new_level()
+                self.draw_win_window()
+                return 'game_end'
+            else:
+                PopUpWindow.PopUpWindow(self.screen, 'Вы собрали не все части моего числа!!!')
+                self.player_koor = self.past_player_koor
+
+    def heroes_processing(self):
+        self.check_fight_event()
+        self.check_chest_event()
+        return self.check_password_event()
 
 
 class Textorcist:
-    def __init__(self, level):
-        self.level = level
-        self.materials_map = read_map(level, 'materials')
-        self.heroes_map = read_map(level, 'heroes')
-        self.chest_map = read_map(level, 'chest')
-
+    def __init__(self):
+        self.running = True
         pygame.init()
         pygame.display.set_caption('Textorcist')
         self.screen = pygame.display.set_mode(SIZE)
@@ -152,24 +166,19 @@ class Textorcist:
             player.new_koor(pygame.K_RIGHT)
 
     def run(self):
-        player = Player(self.screen, *MAP_SIZE, self.level, self.materials_map, self.heroes_map, self.chest_map,
-                        get_player_koor(self.level))
-        running = True
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                self.clicks_processing(player)
-                player.heroes_processing()
+        player = Player(self.screen)
+        while self.running:
             self.screen.fill((0, 0, 0))
             player.render(self.screen, player.player_koor)
             pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+
+                self.clicks_processing(player)
+                result = player.heroes_processing()
+                if result == 'game_end':
+                    self.running = False
+                    break
         pygame.quit()
-
-
-def main(level):
-    game = Textorcist(level)
-
-
-if __name__ == '__main__':
-    main('level_1')
